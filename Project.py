@@ -1,18 +1,19 @@
-# -*- coding: utf-8 -*-
+# -*- coding: UTF-8 -*-
 from visual import *
 from visual.graph import *
 
 #PARAMETER#################################################################
 G = 6.67408 * (10**-11)  #萬有引力常數 (m^3 * kg^-1 * s ^ -2)
-g = vector(0, -9.8, 0)             #重力加速度 9.8 m/s^2   後面有函式改這個值
+g = vector(0, -9.8, 0)      #重力加速度 9.8 m/s^2   後面有函式改這個值
 bottomRadius = 12   #火箭底面半徑(m)
 RocketHeight = 70       #火箭長度(m)
 
-RocketMass = 54    #火箭淨重 (kg)
+RocketMass = 50.0    #火箭淨重 (kg)
 
-Fuel1Mass = 728.0      #燃料1重量 (kg)
-Stage1SepHeight = 5000 * 1000  #火箭1脫節高度(m)
-Fuel2Mass = 172.0      #燃料2重量 (kg)
+ShootAngle = 50.0
+Fuel1Mass = 550.0      #燃料1重量 (kg)
+Stage1SepHeight = 500 * 1000  #火箭1脫節高度(m)
+Fuel2Mass = 250.0      #燃料2重量 (kg)
 
 Stage = 1 #階段
 
@@ -20,23 +21,27 @@ CurrentMass = RocketMass + Fuel1Mass + Fuel2Mass #後面有函式改這個值
 FuelEmitPS = 0.024  #燃料每秒排放質量 (kg)
 FuelEmitSpd = 5000.0   #燃料噴射速度(m/s)
 
-InitV = vector(0, 1, 0) #火箭初始速度
-#k = 0.1487630009487594878787878787000000800092000 #空阻係數
-Graph_Tmax = 3000 #-t圖的x軸極限
+InitV = vector(0, 0, 0) #火箭初始速度
+
+Graph_Tmax = 9999 #-t圖的x軸極限
 scene_Range = 870000 #攝影機拍攝範圍
+RocketTrailStyle = "points" #"points" or "trail" or "PoiCurve"
+SetPointFreq = 1000 #cmd紀錄/軌跡 時間間隔
+
 EarthRadius = 6371000.0 ; #地球半徑 (m)
 EarthMass = 5.97237 * (10**24) #地球質量(kg)
 
 dt = 0.01     #時間間隔
 t = 0.0
 #INIT_SCENE#####################################################################
-scene = display(title='Chaos Saber!!!!!!!!!',width=600, height=600, background=(0,0,0),
+scene = display(width=600, height=600, background=(0,0,0),
                 center=(0,1000,0),range=scene_Range)#設定畫面
+scene.title = "Launch! With our Hopes and Dreams!"
 
 y_t = gdisplay(x=600,y=0,width=300,height=300,     #畫y-t圖
               title='x-t', xtitle='t', ytitle='Altitude (m)',
               foreground=color.black,background=color.white,
-              xmax=Graph_Tmax, xmin=0, ymax=300*1000, ymin=0)
+              xmax=Graph_Tmax, xmin=0, ymax=Stage1SepHeight * 15, ymin=0)
 f1 = gcurve(color=color.red)
 
 v_t = gdisplay(x=900,y=0,width=300,height=300,   #畫v-t圖
@@ -61,9 +66,19 @@ f4 = gcurve(color=color.red)
 floor = box(length = 28, height = 0.01, width = 28, color = color.green)  #畫地板
 earth = sphere(radius = EarthRadius, pos = (0,-EarthRadius, 0), material = materials.earth )
 rocket = cone(radius = bottomRadius, color=color.yellow,
-              make_trail= True, trail_type="points", interval=3000, retain = 500) #畫
+          make_trail= True, trail_type="points", interval=SetPointFreq*10, retain = 666) #畫
 
-#botLabel = label(pos=(0,0,0), text='Text')
+if RocketTrailStyle == "curve":
+    rocket = cone(radius = bottomRadius, color=color.yellow,
+              make_trail= True, trail_type="curve", interval=1, retain = 666666) #畫
+elif RocketTrailStyle == "PoiCurve":
+    rocket = cone(radius = bottomRadius, color=color.yellow,
+              make_trail= True, trail_type="points", interval=3, retain = 666666) #畫
+else:
+    rocket = cone(radius = bottomRadius, color=color.yellow,
+              make_trail= True, trail_type="points", interval=SetPointFreq*10, retain = 444) #畫
+
+
 
 Yee = text(text='Yee', align='center', height= 7, depth=-0.93, color=color.green, pos = vector(0,4,0)) #Yee.
 
@@ -71,8 +86,11 @@ rocket.pos = vector(0, 0, 0)        #初始位置
 rocket.axis = vector(0, RocketHeight, 0)
 rocket.v = InitV      #初速
 rocket.a = vector(0,0,0)
+ShootAngleVec = vector(cos(ShootAngle), sin(ShootAngle), 0)
 
+UIprintCD = SetPointFreq
 
+#DEFINE#########################################################################
 def calc_g(dist): #PARA: distance(vec3)
     #print G , CurrentMass , EarthMass , rocket.pos.y, EarthRadius
     #print G  * EarthMass / ( (rocket.pos.y+EarthRadius) ** 2)
@@ -81,8 +99,35 @@ def calc_g(dist): #PARA: distance(vec3)
 def calc_CurrentMass():
     return RocketMass + Fuel1Mass + Fuel2Mass
 
+def Draw_pic(): #繪畫圖表 & set scene focus
+    Altitude = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 - EarthRadius
+    Speed = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
+    Acc = ((rocket.a.x)**2+(rocket.a.y)**2+(rocket.a.z)**2)**0.5
+    f1.plot( pos=(t, Altitude))
+    f2.plot( pos=(t, Speed))
+    f3.plot( pos=(t, CurrentMass))
+    f4.plot( pos=(t, Acc))
+    scene.center = rocket.pos
+
+def print_UI():
+    global UIprintCD
+    UIprintCD -= 1
+    if UIprintCD <= 0:
+        UIprintCD = SetPointFreq
+        Altitude = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 - EarthRadius
+        Speed = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
+        Acc = ((rocket.a.x)**2+(rocket.a.y)**2+(rocket.a.z)**2)**0.5
+        Dialogue  = "Stage "+ str(Stage) + " | "
+        Dialogue += "Time " + str("%.0f" % t) + "s | "
+        Dialogue += "Mass " + str("%.4f" % CurrentMass) + "kg | "
+        Dialogue += "Alt. " + str("%.4f" % Altitude) + "m | "
+        Dialogue += "Spd. " + str("%.4f" % Speed) + "m/s | "
+        Dialogue += "Acc. " + str("%.4f" % Acc) + "m/(s**2)"
+        print Dialogue
+
+
+
 #LOOP 1######################################################################
-print "STAGE 1"
 while Stage == 1: #phase 1
     rate(6666)   #每一秒跑  次
     t = t + dt    #timer
@@ -114,26 +159,25 @@ while Stage == 1: #phase 1
     CurrentMass = calc_CurrentMass()
     rocket.pos += rocket.v*dt
 
+    #calc g#
     dist = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 #距離純量
     radiavector = (rocket.pos-earth.pos)/dist #距離(向量)
     g = calc_g(dist) * radiavector
     #print g
 
+    #SPIN#
+    RV = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
+    AntiRV = 1 / RV
+    rocket.axis = rocket.v * AntiRV * RocketHeight
+
     #畫圖#############################################################
-    f1.plot( pos=(t, rocket.pos.y))
-    f2.plot( pos=(t, rocket.v.y))
-    f3.plot( pos=(t, CurrentMass))
-    f4.plot( pos=(t, rocket.a.y))
-    scene.center = rocket.pos
+    Draw_pic()
 
     #ui設計################################################################
-    #botLabel.pos = (scene.center.x - 70, scene.center.y - 70, 0);
-    #botLabel.text = "Stage " + str(Stage)
+    print_UI()
 
 
 #LOOP 2######################################################################
-print "STAGE 2"
-tmp = 0
 while Stage == 2: #phase 1
     rate(6666)   #每一秒跑  次
     t = t + dt    #timer
@@ -148,11 +192,7 @@ while Stage == 2: #phase 1
         delta_v = 0
     rocket.a = vector(delta_v/dt , 0, 0)
 
-
     rocket.a += g
-    #if a < 0 : a = 0
-
-    #如果墜地##########################################################
 
 
     #基本運算#############################################################
@@ -160,21 +200,28 @@ while Stage == 2: #phase 1
     CurrentMass = calc_CurrentMass()
     rocket.pos += rocket.v*dt
 
+    #calc g#
     dist = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 #距離純量
     radiavector = (rocket.pos-earth.pos)/dist #距離(向量)
     g = calc_g(dist) * radiavector
-    tmp += 1
-    if tmp > 100:
-        print g
-        tmp = 0
+    #print g
+
+    #SPIN#
+    RV = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
+    AntiRV = 1 / RV
+    rocket.axis = rocket.v * AntiRV * RocketHeight
+
+    #如果墜地##########################################################
+    if(dist < EarthRadius):
+        print "Ahhhhh!!! Rocket Crushed!!"
+        break
 
     #畫圖############################################################
-    f1.plot( pos=(t, rocket.pos.y))
-    f2.plot( pos=(t, rocket.v.y))
-    f3.plot( pos=(t, CurrentMass))
-    f4.plot( pos=(t, rocket.a.y))
-    scene.center = rocket.pos
+    Draw_pic()
 
     #ui設計################################################################
-    #botLabel.pos = (scene.center.x - 70, scene.center.y - 70, 0);
-    #botLabel.text = "Stage " + str(Stage)
+    print_UI()
+
+
+while true:
+    rate(1)
