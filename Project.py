@@ -15,12 +15,12 @@ Fuel1Mass = 817.0      #燃料1重量 (kg)
 Stage1SepHeight = 8140.9 * 1000  #火箭1脫節高度(m)
 Fuel2Mass = 100.0      #燃料2重量 (kg)
 
-Stage = 1 #階段
+Stage = 0 #階段
 
 CurrentMass = RocketMass + Fuel1Mass + Fuel2Mass #後面有函式改這個值
-Fuel1EmitPS = 0.075  #燃料1每秒排放質量 (kg)
-Fuel1EmitSpd = 4876.3   #燃料1噴射速度(m/s)
-Fuel2EmitPS = 0.014  #燃料2每秒排放質量 (kg)
+Fuel1EmitPS = 0.005  #燃料1每秒排放質量 (kg)
+Fuel1EmitSpd = 4500.0   #燃料1噴射速度(m/s)
+Fuel2EmitPS = 0.0014  #燃料2每秒排放質量 (kg)
 Fuel2EmitSpd = 5000.0   #燃料2噴射速度(m/s)
 
 InitV = vector(0, 0, 0) #火箭初始速度
@@ -33,7 +33,7 @@ SetPointFreq = 1000 #cmd紀錄/軌跡 時間間隔
 EarthRadius = 6371 * 1000.0 ; #地球半徑 (m)
 EarthMass = 5.97237 * (10**24) #地球質量(kg)
 
-dt = 0.01     #時間間隔
+dt = 0.001     #時間間隔
 t = 0.0
 RATE = 6666 #迴圈執行速度
 #INIT_SCENE#####################################################################
@@ -62,7 +62,7 @@ f3 = gcurve(color=color.red)
 a_t = gdisplay(x=900,y=300,width=300,height=300,   #畫a-t圖
               title='a-t', xtitle='t', ytitle='ay (m/s^2)',
               foreground=color.black,background=color.white,
-              xmax=Graph_Tmax, xmin=0, ymax=100, ymin=-100)
+              xmax=Graph_Tmax, xmin=0, ymax=100, ymin=0)
 f4 = gcurve(color=color.red)
 
 #INIT####################################################################
@@ -83,7 +83,7 @@ else:
 
 
 
-Yee = text(text='Yee', align='center', height= 99999, depth=48763, color=color.green, pos = vector(0,200,0)) #Yee.
+Yee = text(text='Yee', align='center', height= 99999, depth=48763, color=color.green, pos = vector(0,0,-201700)) #Yee.
 
 rocket.pos = vector(0, 0, 0)        #初始位置
 rocket.axis = vector(0, RocketHeight, 0)
@@ -128,11 +128,11 @@ def print_UI():
         Dialogue += "Acc. " + str("%.4f" % Acc) + "m/(s**2)"
         print Dialogue
 
-
 def KeyInput(Event):  # keyboard interrupt callback function,
-    global RATE, dt     # define the global variables that you want to change by this function
+    global RATE, dt , Stage    # define the global variables that you want to change by this function
     RATEmod = {'-': -66, '=': 66}
     dtmod = {'[': 1.0/1.1, ']': 1.1}
+    Stagemod = {' ': 1}
 
     s = Event.key
     if s in RATEmod :
@@ -141,8 +141,17 @@ def KeyInput(Event):  # keyboard interrupt callback function,
     if s in dtmod:
         dt *= dtmod[s]
         print "Modified dt to ", dt
+    if s in Stagemod:
+        Stage += Stagemod[s]
 scene.bind('keydown', KeyInput)                    # the binding method
 
+#LOOP 1######################################################################
+while  Stage == 0:
+    rate(RATE)
+    #畫圖#############################################################
+    Draw_pic()
+    #ui設計################################################################
+    print_UI()
 
 #LOOP 1######################################################################
 while Stage == 1: #phase 1
@@ -199,6 +208,7 @@ while Stage == 1: #phase 1
     print_UI()
 
 
+Fuel1Mass = 0;
 #LOOP 2######################################################################
 while Stage == 2: #phase 1
     rate(RATE)   #每一秒跑  次
