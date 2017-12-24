@@ -35,7 +35,7 @@ EarthMass = 5.97237 * (10**24) #地球質量(kg)
 
 dt = 0.001     #時間間隔
 t = 0.0
-RATE = 6666 #迴圈執行速度
+RATE = 16666 #迴圈執行速度
 #INIT_SCENE#####################################################################
 scene = display(width=600, height=600, background=(0,0,0),
                 center=(0,1000,0),range=scene_Range)#設定畫面
@@ -44,7 +44,7 @@ scene.title = "Launch! With our Hopes and Dreams!"
 y_t = gdisplay(x=600,y=0,width=300,height=300,     #畫y-t圖
               title='x-t', xtitle='t', ytitle='Altitude (m)',
               foreground=color.black,background=color.white,
-              xmax=Graph_Tmax, xmin=0, ymax=Stage1SepHeight * 5, ymin=0)
+              xmax=Graph_Tmax, xmin=0, ymax=Stage1SepHeight, ymin=0)
 f1 = gcurve(color=color.red)
 
 v_t = gdisplay(x=900,y=0,width=300,height=300,   #畫v-t圖
