@@ -10,7 +10,6 @@ RocketHeight = 70       #火箭長度(m)
 
 RocketMass = 50.0    #火箭淨重 (kg)
 
-ShootAngle = 50.0
 Fuel1Mass = 817.0      #燃料1重量 (kg)
 Stage1SepHeight = 8140.9 * 1000  #火箭1脫節高度(m)
 Fuel2Mass = 100.0      #燃料2重量 (kg)
@@ -28,14 +27,14 @@ InitV = vector(0, 0, 0) #火箭初始速度
 Graph_Tmax = 9999 #-t圖的x軸極限
 scene_Range = 870000 #攝影機拍攝範圍
 RocketTrailStyle = "points" #"points" or "trail" or "PoiCurve"
-SetPointFreq = 1000 #cmd紀錄/軌跡 時間間隔
+SetPointFreq = 10000 #cmd紀錄/軌跡 時間間隔
 
 EarthRadius = 6371 * 1000.0 ; #地球半徑 (m)
 EarthMass = 5.97237 * (10**24) #地球質量(kg)
 
-dt = 0.001     #時間間隔
+dt = 0.0015     #時間間隔
 t = 0.0
-RATE = 16666 #迴圈執行速度
+RATE = 20000 #迴圈執行速度
 #INIT_SCENE#####################################################################
 scene = display(width=600, height=600, background=(0,0,0),
                 center=(0,1000,0),range=scene_Range)#設定畫面
