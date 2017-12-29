@@ -35,6 +35,11 @@ EarthMass = 5.97237 * (10**24) #地球質量(kg)
 dt = 0.0015     #時間間隔
 t = 0.0
 RATE = 20000 #迴圈執行速度
+
+dist = 0.0
+radiavector = vector(0.0,0.0,0.0)
+RV = 0
+
 #INIT_SCENE#####################################################################
 scene = display(width=600, height=600, background=(0,0,0),
                 center=(0,1000,0),range=scene_Range)#設定畫面
@@ -88,7 +93,6 @@ rocket.pos = vector(0, 0, 0)        #初始位置
 rocket.axis = vector(0, RocketHeight, 0)
 rocket.v = InitV      #初速
 rocket.a = vector(0,0,0)
-ShootAngleVec = vector(cos(ShootAngle), sin(ShootAngle), 0)
 
 UIprintCD = SetPointFreq
 
@@ -100,6 +104,23 @@ def calc_g(dist): #PARA: distance(vec3)
 
 def calc_CurrentMass():
     return RocketMass + Fuel1Mass + Fuel2Mass
+
+def Let_Rocket_Fly():
+    global rocket, CurrentMass, dist, radiavector, g, RV
+    rocket.v += rocket.a*dt
+    CurrentMass = calc_CurrentMass()
+    rocket.pos += rocket.v*dt
+
+    #calc g#
+    dist = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 #距離純量
+    radiavector = (rocket.pos-earth.pos)/dist #距離(向量)
+    g = calc_g(dist) * radiavector
+    #print g
+
+    #SPIN#
+    RV = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
+    AntiRV = 1 / RV
+    rocket.axis = rocket.v * AntiRV * RocketHeight
 
 def Draw_pic(): #繪畫圖表 & set scene focus
     Altitude = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 - EarthRadius
@@ -144,7 +165,8 @@ def KeyInput(Event):  # keyboard interrupt callback function,
         Stage += Stagemod[s]
 scene.bind('keydown', KeyInput)                    # the binding method
 
-#LOOP 1######################################################################
+#LOOP 0######################################################################
+print "### Stage 0: Init ###"
 while  Stage == 0:
     rate(RATE)
     #畫圖#############################################################
@@ -153,6 +175,7 @@ while  Stage == 0:
     print_UI()
 
 #LOOP 1######################################################################
+print "### Stage 1: S1 I"
 while Stage == 1: #phase 1
     rate(RATE)   #每一秒跑  次
     t = t + dt    #timer
@@ -177,21 +200,7 @@ while Stage == 1: #phase 1
         Stage = 2
 
     #基本運算#############################################################
-    rocket.v += rocket.a*dt
-    CurrentMass = calc_CurrentMass()
-    rocket.pos += rocket.v*dt
-
-    #calc g#
-    dist = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 #距離純量
-    radiavector = (rocket.pos-earth.pos)/dist #距離(向量)
-    g = calc_g(dist) * radiavector
-    #print g
-
-    #SPIN#
-    RV = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
-    AntiRV = 1 / RV
-    rocket.axis = rocket.v * AntiRV * RocketHeight
-
+    Let_Rocket_Fly()
 
     #如果墜地##########################################################
     if(dist < EarthRadius and RV >= 1):
@@ -227,20 +236,7 @@ while Stage == 2: #phase 1
 
 
     #基本運算#############################################################
-    rocket.v += rocket.a*dt
-    CurrentMass = calc_CurrentMass()
-    rocket.pos += rocket.v*dt
-
-    #calc g#
-    dist = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 #距離純量
-    radiavector = (rocket.pos-earth.pos)/dist #距離(向量)
-    g = calc_g(dist) * radiavector
-    #print g
-
-    #SPIN#
-    RV = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
-    AntiRV = 1 / RV
-    rocket.axis = rocket.v * AntiRV * RocketHeight
+    Let_Rocket_Fly()
 
     #如果墜地##########################################################
     if(dist < EarthRadius):
