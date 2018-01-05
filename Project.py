@@ -9,22 +9,23 @@ bottomRadius = 12   #火箭底面半徑(m)
 RocketHeight = 70       #火箭長度(m)
 
 RocketMass = 50.0    #火箭淨重 (kg)
-
-Fuel1Mass = 817.0      #燃料1重量 (kg)
-Stage1SepHeight = 8140.9 * 1000  #火箭1脫節高度(m)
+Fuel1Mass = 1100.0      #燃料1重量 (kg)
+EarthOrbit = 3000 * 1000 #軌道高度(m)
+Stage1SepHeight = 3000 * 1000  #火箭1脫節高度(m)
 Fuel2Mass = 100.0      #燃料2重量 (kg)
 
-Stage = 0 #階段
+
+Stage = 0 #階段 後面有函式改這個值
 
 CurrentMass = RocketMass + Fuel1Mass + Fuel2Mass #後面有函式改這個值
-Fuel1EmitPS = 0.005  #燃料1每秒排放質量 (kg)
+Fuel1EmitPS = 0.0053  #燃料1每秒排放質量 (kg)
 Fuel1EmitSpd = 4500.0   #燃料1噴射速度(m/s)
-Fuel2EmitPS = 0.0014  #燃料2每秒排放質量 (kg)
-Fuel2EmitSpd = 5000.0   #燃料2噴射速度(m/s)
+Fuel2EmitPS = 0.0099  #燃料2每秒排放質量 (kg)
+Fuel2EmitSpd = 6000.0   #燃料2噴射速度(m/s)
 
 InitV = vector(0, 0, 0) #火箭初始速度
 
-Graph_Tmax = 9999 #-t圖的x軸極限
+Graph_Tmax = 1500 #-t圖的x軸極限
 scene_Range = 870000 #攝影機拍攝範圍
 RocketTrailStyle = "points" #"points" or "trail" or "PoiCurve"
 SetPointFreq = 10000 #cmd紀錄/軌跡 時間間隔
@@ -32,15 +33,16 @@ SetPointFreq = 10000 #cmd紀錄/軌跡 時間間隔
 EarthRadius = 6371 * 1000.0 ; #地球半徑 (m)
 EarthMass = 5.97237 * (10**24) #地球質量(kg)
 
-dt = 0.0015     #時間間隔
+dt = 0.002     #時間間隔
 t = 0.0
-RATE = 20000 #迴圈執行速度
+RATE = 10000 #迴圈執行速度
 
 dist = 0.0
 radiavector = vector(0.0,0.0,0.0)
 RV = 0
+graphClosed = False
 
-#INIT_SCENE#####################################################################
+#INIT_SCENE & GRAPH##################################################################
 scene = display(width=600, height=600, background=(0,0,0),
                 center=(0,1000,0),range=scene_Range)#設定畫面
 scene.title = "Launch! With our Hopes and Dreams!"
@@ -74,6 +76,11 @@ floor = box(length = 28, height = 0.01, width = 28, color = color.green)  #畫�
 earth = sphere(radius = EarthRadius, pos = (0,-EarthRadius, 0), material = materials.earth )
 rocket = cone(radius = bottomRadius, color=color.yellow,
           make_trail= True, trail_type="points", interval=SetPointFreq*10, retain = 666) #畫
+
+OrbitCircle = curve( color = (40.0/255, 40.0/255,40.0/255) )
+for N in range(0, 360, 1):
+    r = EarthOrbit + EarthRadius
+    OrbitCircle.append( pos =(r*cos(N*pi/180), r*sin(N*pi/180) - EarthRadius, 0) )
 
 if RocketTrailStyle == "curve":
     rocket = cone(radius = bottomRadius, color=color.yellow,
@@ -123,13 +130,24 @@ def Let_Rocket_Fly():
     rocket.axis = rocket.v * AntiRV * RocketHeight
 
 def Draw_pic(): #繪畫圖表 & set scene focus
-    Altitude = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 - EarthRadius
-    Speed = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
-    Acc = ((rocket.a.x)**2+(rocket.a.y)**2+(rocket.a.z)**2)**0.5
-    f1.plot( pos=(t, Altitude))
-    f2.plot( pos=(t, Speed))
-    f3.plot( pos=(t, CurrentMass))
-    f4.plot( pos=(t, Acc))
+    global graphClosed;
+    if t < Graph_Tmax * 1.1:
+        Altitude = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 - EarthRadius
+        Speed = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
+        Acc = ((rocket.a.x)**2+(rocket.a.y)**2+(rocket.a.z)**2)**0.5
+        f1.plot( pos=(t, Altitude))
+        f2.plot( pos=(t, Speed))
+        f3.plot( pos=(t, CurrentMass))
+        f4.plot( pos=(t, Acc))
+    elif graphClosed == False: #刪除圖表(因為爆表了)
+        y_t.display.delete();
+        v_t.display.delete();
+        a_t.display.delete();
+        M_t.display.delete();
+        print ("Deleting Gdisplay...")
+        graphClosed = True
+
+
     scene.center = rocket.pos
 
 def print_UI():
@@ -146,7 +164,7 @@ def print_UI():
         Dialogue += "Alt. " + str("%.4f" % Altitude) + "m | "
         Dialogue += "Spd. " + str("%.4f" % Speed) + "m/s | "
         Dialogue += "Acc. " + str("%.4f" % Acc) + "m/(s**2)"
-        print Dialogue
+        print Dialogue #cmd紀錄
 
 def KeyInput(Event):  # keyboard interrupt callback function,
     global RATE, dt , Stage    # define the global variables that you want to change by this function
@@ -163,7 +181,7 @@ def KeyInput(Event):  # keyboard interrupt callback function,
         print "Modified dt to ", dt
     if s in Stagemod:
         Stage += Stagemod[s]
-scene.bind('keydown', KeyInput)                    # the binding method
+scene.bind('keydown', KeyInput) # the binding method
 
 #LOOP 0######################################################################
 print "### Stage 0: Init ###"
@@ -218,7 +236,7 @@ while Stage == 1: #phase 1
 
 Fuel1Mass = 0;
 #LOOP 2######################################################################
-while Stage == 2: #phase 1
+while Stage == 2:
     rate(RATE)   #每一秒跑  次
     t = t + dt    #timer
 
@@ -234,7 +252,6 @@ while Stage == 2: #phase 1
 
     rocket.a += g
 
-
     #基本運算#############################################################
     Let_Rocket_Fly()
 
@@ -248,6 +265,8 @@ while Stage == 2: #phase 1
 
     #ui設計################################################################
     print_UI()
+
+
 
 
 while Stage == 66666:
