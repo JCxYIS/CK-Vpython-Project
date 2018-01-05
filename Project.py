@@ -41,6 +41,7 @@ dist = 0.0
 radiavector = vector(0.0,0.0,0.0)
 RV = 0
 graphClosed = False
+Stat = "null"
 
 #INIT_SCENE & GRAPH##################################################################
 scene = display(width=600, height=600, background=(0,0,0),
@@ -131,7 +132,7 @@ def Let_Rocket_Fly():
 
 def Draw_pic(): #繪畫圖表 & set scene focus
     global graphClosed;
-    if t < Graph_Tmax * 1.1:
+    if t < Graph_Tmax:
         Altitude = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 - EarthRadius
         Speed = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
         Acc = ((rocket.a.x)**2+(rocket.a.y)**2+(rocket.a.z)**2)**0.5
@@ -160,10 +161,11 @@ def print_UI():
         Acc = ((rocket.a.x)**2+(rocket.a.y)**2+(rocket.a.z)**2)**0.5
         Dialogue  = "Stage "+ str(Stage) + " | "
         Dialogue += "Time " + str("%.0f" % t) + "s | "
-        Dialogue += "Mass " + str("%.4f" % CurrentMass) + "kg | "
-        Dialogue += "Alt. " + str("%.4f" % Altitude) + "m | "
-        Dialogue += "Spd. " + str("%.4f" % Speed) + "m/s | "
-        Dialogue += "Acc. " + str("%.4f" % Acc) + "m/(s**2)"
+        Dialogue += "Mass " + str("%.3f" % CurrentMass) + "kg | "
+        Dialogue += "Alt. " + str("%.3f" % (Altitude/1000)) + "km | "
+        Dialogue += "Spd. " + str("%.3f" % Speed) + "m/s | "
+        Dialogue += "Acc. " + str("%.3f" % Acc) + "m/(s**2) | "
+        Dialogue += "Stat: " + Stat
         print Dialogue #cmd紀錄
 
 def KeyInput(Event):  # keyboard interrupt callback function,
@@ -241,7 +243,34 @@ while Stage == 2:
     t = t + dt    #timer
 
     #燃料2噴射########################################################
+    #目標速度 (G*M/H)**0.5
+    Altitude = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 - EarthRadius
+    DistanceToCircle = Altitude - EarthOrbit; #比軌道"高"幾m
+
     # M*Pre_ball.v.y = (M-dm)*ball.v.y+dm*(ball.v.y-u)  動量守恆
+    if DistanceToCircle > 0: #比軌道高
+        if rocket.v < (G*RocketMass/EarthOrbit)**0.5:
+            Stat = "Too High, Too Slow"
+        elif rocket.v > (G*RocketMass/EarthOrbit)**0.5:
+            Stat = "Too High, Too Fast"
+        elif rocket.v == (G*RocketMass/EarthOrbit)**0.5:
+            Stat = "Too High, Good Spd"
+    elif DistanceToCircle < 0:
+        if rocket.v < (G*RocketMass/EarthOrbit)**0.5:
+            Stat = "Too Low, Too Slow"
+        elif rocket.v > (G*RocketMass/EarthOrbit)**0.5:
+            Stat = "Too Low, Too Fast"
+        elif rocket.v == (G*RocketMass/EarthOrbit)**0.5:
+            Stat = "Too Low, Good Spd"
+    elif DistanceToCircle == 0:
+        if rocket.v < (G*RocketMass/EarthOrbit)**0.5:
+            Stat = "Good Alt, Too Slow"
+        elif rocket.v > (G*RocketMass/EarthOrbit)**0.5:
+            Stat = "Good Alt, Too Fast"
+        elif rocket.v == (G*RocketMass/EarthOrbit)**0.5:
+            Stat = "Perfect!!!"
+
+
     if Fuel2Mass > 0: #燃料噴射
         delta_v = Fuel2EmitPS * Fuel2EmitSpd / CurrentMass #速度增加量, according to the above formula(F=ma not working)
         Fuel2Mass -= Fuel2EmitPS
@@ -269,5 +298,5 @@ while Stage == 2:
 
 
 
-while Stage == 66666:
+while Stage >= 66666: #希望破滅後的世界
     rate(1)
