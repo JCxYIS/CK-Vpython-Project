@@ -20,8 +20,8 @@ Stage = 0 #階段 後面有函式改這個值
 CurrentMass = RocketMass + Fuel1Mass + Fuel2Mass #後面有函式改這個值
 Fuel1EmitPS = 0.0053  #燃料1每秒排放質量 (kg)
 Fuel1EmitSpd = 4500.0   #燃料1噴射速度(m/s)
-Fuel2EmitPS = 0.0099  #燃料2每秒排放質量 (kg)
-Fuel2EmitSpd = 6000.0   #燃料2噴射速度(m/s)
+Fuel2EmitPS = 0.0009  #燃料2每秒排放質量 (kg)
+Fuel2EmitSpd = 9000.0   #燃料2噴射速度(m/s)
 
 InitV = vector(0, 0, 0) #火箭初始速度
 
@@ -35,7 +35,7 @@ EarthMass = 5.97237 * (10**24) #地球質量(kg)
 
 dt = 0.002     #時間間隔
 t = 0.0
-RATE = 10000 #迴圈執行速度
+RATE = 20000 #迴圈執行速度
 
 dist = 0.0
 radiavector = vector(0.0,0.0,0.0)
@@ -235,10 +235,18 @@ while Stage == 1: #phase 1
     #ui設計################################################################
     print_UI()
 
-
-Fuel1Mass = 0;
-#LOOP 2######################################################################
 while Stage == 2:
+    Fuel1Mass = 0;
+    if Fuel2Mass > 0: #燃料噴射
+        delta_v = Fuel2EmitPS * Fuel2EmitSpd / CurrentMass #速度增加量, according to the above formula(F=ma not working)
+        Fuel2Mass -= Fuel2EmitPS
+    else:
+        Stage = 3;
+    rocket.a = vector(delta_v/dt , 0, 0)
+    rocket.a += g
+
+#LOOP 2######################################################################
+while Stage == 3:
     rate(RATE)   #每一秒跑  次
     t = t + dt    #timer
 
@@ -247,38 +255,61 @@ while Stage == 2:
     Altitude = ((rocket.x-earth.x)**2+(rocket.y-earth.y)**2+(rocket.z-earth.z)**2)**0.5 - EarthRadius
     DistanceToCircle = Altitude - EarthOrbit; #比軌道"高"幾m
 
+    delta_v = 0;
     # M*Pre_ball.v.y = (M-dm)*ball.v.y+dm*(ball.v.y-u)  動量守恆
+    Speed = ((rocket.v.x)**2+(rocket.v.y)**2+(rocket.v.z)**2)**0.5
+    VectorToEarth =  earth.pos - rocket.pos;
+    #print (G*EarthMass/EarthOrbit)**0.5
     if DistanceToCircle > 0: #比軌道高
-        if rocket.v < (G*RocketMass/EarthOrbit)**0.5:
+        if Speed < (G*EarthMass/EarthOrbit)**0.5:
             Stat = "Too High, Too Slow"
-        elif rocket.v > (G*RocketMass/EarthOrbit)**0.5:
+            delta_v = Fuel2EmitPS * Fuel2EmitSpd * norm(-VectorToEarth) / CurrentMass;
+            #Fuel2Mass -= Fuel2EmitPS
+        elif Speed > (G*EarthMass/EarthOrbit)**0.5:
             Stat = "Too High, Too Fast"
-        elif rocket.v == (G*RocketMass/EarthOrbit)**0.5:
+            delta_v = Fuel2EmitPS * Fuel2EmitSpd * norm(VectorToEarth) / CurrentMass;
+            #Fuel2Mass -= Fuel2EmitPS
+        elif Speed == (G*EarthMass/EarthOrbit)**0.5:
             Stat = "Too High, Good Spd"
     elif DistanceToCircle < 0:
-        if rocket.v < (G*RocketMass/EarthOrbit)**0.5:
+        if Speed < (G*EarthMass/EarthOrbit)**0.5:
             Stat = "Too Low, Too Slow"
-        elif rocket.v > (G*RocketMass/EarthOrbit)**0.5:
+            delta_v = Fuel2EmitPS * Fuel2EmitSpd * norm(-VectorToEarth) / CurrentMass;
+            GoUpSpd = vector(-rocket.v.y, rocket.v.x, 0); #與火箭速度垂直的速度向量
+            delta_v += Fuel2EmitPS * Fuel2EmitSpd * norm(GoUpSpd) / CurrentMass;
+            #Fuel2Mass -= 2*Fuel2EmitPS
+        elif Speed > (G*EarthMass/EarthOrbit)**0.5:
             Stat = "Too Low, Too Fast"
-        elif rocket.v == (G*RocketMass/EarthOrbit)**0.5:
+            GoUpSpd = vector(-rocket.v.y, rocket.v.x, 0); #與火箭速度垂直的速度向量
+            delta_v = Fuel2EmitPS * Fuel2EmitSpd * norm(VectorToEarth) / CurrentMass;
+            delta_v += Fuel2EmitPS * Fuel2EmitSpd * norm(GoUpSpd) / CurrentMass;
+            #Fuel2Mass -= 2*Fuel2EmitPS
+        elif Speed == (G*EarthMass/EarthOrbit)**0.5:
+            GoUpSpd = vector(-rocket.v.y, rocket.v.x, 0); #與火箭速度垂直的速度向量
+            delta_v += Fuel2EmitPS * Fuel2EmitSpd * norm(GoUpSpd) / CurrentMass;
+            #Fuel2Mass -= Fuel2EmitPS
             Stat = "Too Low, Good Spd"
     elif DistanceToCircle == 0:
-        if rocket.v < (G*RocketMass/EarthOrbit)**0.5:
+        if Speed < (G*EarthMass/EarthOrbit)**0.5:
             Stat = "Good Alt, Too Slow"
-        elif rocket.v > (G*RocketMass/EarthOrbit)**0.5:
+            delta_v = Fuel2EmitPS * Fuel2EmitSpd * norm(-VectorToEarth) / CurrentMass;
+            #Fuel2Mass -= Fuel2EmitPS
+        elif Speed > (G*EarthMass/EarthOrbit)**0.5:
             Stat = "Good Alt, Too Fast"
-        elif rocket.v == (G*RocketMass/EarthOrbit)**0.5:
+            delta_v = Fuel2EmitPS * Fuel2EmitSpd * norm(VectorToEarth) / CurrentMass;
+            #Fuel2Mass -= Fuel2EmitPS
+        elif Speed == (G*EarthMass/EarthOrbit)**0.5:
             Stat = "Perfect!!!"
 
-
+    '''
     if Fuel2Mass > 0: #燃料噴射
         delta_v = Fuel2EmitPS * Fuel2EmitSpd / CurrentMass #速度增加量, according to the above formula(F=ma not working)
         Fuel2Mass -= Fuel2EmitPS
     else:
         Fuel2Mass = 0
         delta_v = 0
-    rocket.a = vector(delta_v/dt , 0, 0)
-
+    '''
+    rocket.a = delta_v/dt
     rocket.a += g
 
     #基本運算#############################################################
